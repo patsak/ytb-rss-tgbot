@@ -9,7 +9,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	ytbrss "github.com/patsak/ytb-rss-bot/src"
+	ytbrss "github.com/patsak/ytb-rss-tgbot/src"
 	"github.com/sirupsen/logrus"
 )
 
