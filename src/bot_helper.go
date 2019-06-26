@@ -27,6 +27,7 @@ func Error(b *tgbotapi.BotAPI, chatID int64,  e error) {
 		if _, err := b.Send(msgConfig); err != nil {
 			logrus.Error(err)
 		}
+		return
 	}
 	msgConfig := tgbotapi.NewMessage(chatID, userError.Error())
 	if _, err := b.Send(msgConfig); err != nil {
