@@ -15,9 +15,9 @@ type Encoder struct {
 }
 
 type Processor struct {
-	Title string
+	Title     string
 	AudioPath string
-	Run func() error
+	Run       func() error
 }
 
 func NewEncoder(destDir string) (*Encoder, error) {
@@ -56,10 +56,10 @@ func (e *Encoder) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 	ret := e.destAudio(info.ID)
 
 	return &Processor{
-		Title: info.Title,
+		Title:     info.Title,
 		AudioPath: ret,
 		Run: func() error {
-			cmd := exec.Command("ffmpeg", "-i", e.destVideo(info.ID), "-f", "mp3", "-y", "-ab", "64000", "-vn", ret)
+			cmd := exec.Command("ffmpeg", "-i", e.destVideo(info.ID), "-f", "mp3", "-y", "-ab", "64000", "-metadata", fmt.Sprintf("title=\"%s\"", info.Title), "-vn", ret)
 			err = cmd.Run()
 			if err != nil {
 				return err
@@ -68,7 +68,6 @@ func (e *Encoder) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 		},
 	}, nil
 }
-
 
 func (p *Processor) Progress() int64 {
 	stat, err := os.Stat(p.AudioPath)
@@ -88,4 +87,3 @@ func (e *Encoder) destVideo(id string) string {
 func (e *Encoder) destAudio(id string) string {
 	return e.DestDir + "/" + id + ".mp3"
 }
-
