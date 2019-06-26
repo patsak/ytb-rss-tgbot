@@ -1,6 +1,7 @@
 package ytbrss
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -17,7 +18,6 @@ type Processor struct {
 	Title string
 	AudioPath string
 	Run func() error
-
 }
 
 func NewEncoder(destDir string) (*Encoder, error) {
@@ -30,11 +30,16 @@ func NewEncoder(destDir string) (*Encoder, error) {
 	}, nil
 }
 
-func (e *Encoder) GetProcessor(url *url.URL) (*Processor, error) {
-	info, err := ytdl.GetVideoInfoFromURL(url)
-	if err != nil {
-		return nil, err
+func (e *Encoder) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
+	var info *ytdl.VideoInfo
+	var err error
+	if info, err = ytdl.GetVideoInfoFromURL(url); err != nil {
+		info, err = ytdl.GetVideoInfoFromShortURL(url)
+		if err != nil {
+			return nil, &UserError{msg: fmt.Sprintf("Not youtube link: %s", url)}
+		}
 	}
+
 	if _, err := os.Stat(e.destVideo(info.ID)); os.IsNotExist(err) {
 
 		file, err := os.Create(e.destVideo(info.ID))

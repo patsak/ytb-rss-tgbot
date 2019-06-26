@@ -10,11 +10,11 @@ import (
 
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/patsak/ytb-rss-tgbot/src"
-	"github.com/sirupsen/logrus"
 )
 
 var (
 	destDir = flag.String("dest", "content", "destination dir")
+	rssDir = flag.String("rssDir", "rss", "rss dir")
 	token = flag.String("token", "", "bot token")
 	urlPrefix = flag.String("url", "", "url prefix")
 )
@@ -38,6 +38,7 @@ func main() {
 
 	updates, err := bot.GetUpdatesChan(u)
 	fmt.Println("bot started")
+
 	encoder, err := ytbrss.NewEncoder(*destDir)
 	if err != nil {
 		panic(err)
@@ -52,13 +53,13 @@ func main() {
 		url := &url.URL{}
 		url, err = url.Parse(update.Message.Text)
 		if err != nil {
-			logrus.Error(err.Error())
+			ytbrss.Error(bot, update.Message.Chat.ID, err)
 			continue
 		}
 
-		encodeRes, err := encoder.GetProcessor(url)
+		encodeRes, err := encoder.GetYoutubeProcessor(url)
 		if err != nil {
-			logrus.Error(err)
+			ytbrss.Error(bot, update.Message.Chat.ID, err)
 			continue
 		}
 
@@ -68,7 +69,7 @@ func main() {
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "File size: 0")
 			retMsg, err := bot.Send(msg)
 			if err != nil {
-				logrus.Error(err)
+				ytbrss.Error(bot, update.Message.Chat.ID, err)
 				return
 			}
 
@@ -78,13 +79,13 @@ func main() {
 					progress := encodeRes.Progress()
 					edit := tgbotapi.NewEditMessageText(update.Message.Chat.ID, retMsg.MessageID, fmt.Sprintf("File size: %d", progress))
 					if _, err := bot.Send(edit); err != nil {
-						logrus.Error(err)
+						ytbrss.Error(bot, update.Message.Chat.ID, err)
 					}
 
 				case <-ctx.Done():
 					edit := tgbotapi.NewEditMessageText(update.Message.Chat.ID, retMsg.MessageID, "Processing finished. Wait audio")
 					if _, err := bot.Send(edit); err != nil {
-						logrus.Error(err)
+						ytbrss.Error(bot, update.Message.Chat.ID, err)
 					}
 					return
 				}
@@ -93,13 +94,13 @@ func main() {
 		err = encodeRes.Run()
 		cancelFunc()
 		if err != nil {
-			logrus.Error(err)
+			ytbrss.Error(bot, update.Message.Chat.ID, err)
 			continue
 		}
 
 		sendFile, err := os.OpenFile(encodeRes.AudioPath, os.O_RDONLY, os.ModePerm)
 		if err != nil {
-			logrus.Error(err.Error())
+			ytbrss.Error(bot, update.Message.Chat.ID, err)
 			continue
 		}
 		reader := tgbotapi.FileReader{
@@ -111,7 +112,7 @@ func main() {
 
 		_, err = bot.Send(config)
 		if err != nil {
-			logrus.Error(err.Error())
+			ytbrss.Error(bot, update.Message.Chat.ID, err)
 		}
 	}
 
