@@ -1,4 +1,4 @@
-package  main
+package main
 
 import (
 	"context"
@@ -8,21 +8,20 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/patsak/ytb-rss-tgbot/src"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	destDir = flag.String("dest", "content", "destination dir")
-	rssDir = flag.String("rssDir", "rss", "rss dir")
-	token = flag.String("token", "", "bot token")
+	destDir   = flag.String("dest", "content", "destination dir")
+	rssDir    = flag.String("rssDir", "rss", "rss dir")
+	token     = flag.String("token", "", "bot token")
 	urlPrefix = flag.String("url", "", "url prefix")
 )
 
 func main() {
 	flag.Parse()
 
-	if len(*token) == 0  {
+	if len(*token) == 0 {
 		*token = os.Getenv("TOKEN")
 	}
 
@@ -64,7 +63,7 @@ func main() {
 		}
 
 		go func() {
-			ticker := time.Tick(100*time.Millisecond)
+			ticker := time.Tick(100 * time.Millisecond)
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "File size: 0")
 			retMsg, err := bot.Send(msg)
@@ -73,19 +72,19 @@ func main() {
 				return
 			}
 
-			for  {
+			for {
 				select {
 				case <-ticker:
 					progress := encodeRes.Progress()
 					edit := tgbotapi.NewEditMessageText(update.Message.Chat.ID, retMsg.MessageID, fmt.Sprintf("File size: %d", progress))
 					if _, err := bot.Send(edit); err != nil {
-						ytbrss.Error(bot, update.Message.Chat.ID, err)
+						logrus.Error(err)
 					}
 
 				case <-ctx.Done():
 					edit := tgbotapi.NewEditMessageText(update.Message.Chat.ID, retMsg.MessageID, "Processing finished. Wait audio")
 					if _, err := bot.Send(edit); err != nil {
-						ytbrss.Error(bot, update.Message.Chat.ID, err)
+						logrus.Error(err)
 					}
 					return
 				}
@@ -117,5 +116,3 @@ func main() {
 	}
 
 }
-
-
