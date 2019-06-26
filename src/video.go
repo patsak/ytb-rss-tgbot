@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/rylio/ytdl"
 	"github.com/sirupsen/logrus"
@@ -36,14 +35,17 @@ func (e *Encoder) GetProcessor(url *url.URL) (*Processor, error) {
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.Create(e.destVideo(info.ID))
-	if err != nil {
-		return nil, err
-	}
-	err = info.Download(info.Formats[0], file)
-	_ = file.Close()
-	if err != nil {
-		return nil, err
+	if _, err := os.Stat(e.destVideo(info.ID)); os.IsNotExist(err) {
+
+		file, err := os.Create(e.destVideo(info.ID))
+		if err != nil {
+			return nil, err
+		}
+		err = info.Download(info.Formats[0], file)
+		_ = file.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ret := e.destAudio(info.ID)
@@ -63,16 +65,16 @@ func (e *Encoder) GetProcessor(url *url.URL) (*Processor, error) {
 }
 
 
-func (p *Processor) Progress() time.Duration {
+func (p *Processor) Progress() int64 {
 	stat, err := os.Stat(p.AudioPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logrus.Error(err)
 		}
-		return time.Duration(0)
+		return 0
 	}
 
-	return time.Duration(stat.Size())
+	return stat.Size()
 }
 
 func (e *Encoder) destVideo(id string) string {
