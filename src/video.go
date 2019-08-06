@@ -24,13 +24,12 @@ type VideoDialog struct {
 }
 
 type Processor struct {
-	ID        string
-	Title     string
-	AudioPath string
-	Multifile bool
-	Run       func() error
-	DestDir   string
+	VideoID       string
+	Title         string
+	Run           func() error
+	DestDir       string
 
+	mainAudioPath string
 }
 
 func NewVideoProcessingDialog(destDir string) (*VideoDialog, error) {
@@ -93,10 +92,12 @@ func (d *VideoDialog) Handle(ctx context.Context, bot *tgbotapi.BotAPI, msg *tgb
 	if err != nil {
 		return err
 	}
-	audiofiles, err := encodeRes.Audiofiles()
+
+	audiofiles, err := encodeRes.AudioFiles()
 	if err != nil {
 		return err
 	}
+
 	for i, audioPath := range audiofiles {
 		sendFile, err := os.OpenFile(audioPath, os.O_RDONLY, os.ModePerm)
 		if err != nil {
@@ -147,14 +148,12 @@ func (e *VideoDialog) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 		}
 	}
 
-	parts := info.Duration.Nanoseconds() / maxPartDuration.Nanoseconds()
 	audio := e.destAudio(info.ID)
 
 	return &Processor{
-		Title:     info.Title,
-		AudioPath: audio,
-		Multifile: parts > 0,
-		DestDir: e.DestDir,
+		Title:         info.Title,
+		mainAudioPath: audio,
+		DestDir:       e.DestDir,
 		Run: func() error {
 
 			 cmd := exec.Command("ffmpeg", "-i", e.destVideo(info.ID),
@@ -177,6 +176,10 @@ func (e *VideoDialog) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 			 	if err != nil {
 			 		return err
 				}
+			 	err = os.Remove(audio)
+			 	if err != nil {
+			 		return err
+				}
 			 }
 
 			 return nil
@@ -184,32 +187,26 @@ func (e *VideoDialog) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 	}, nil
 }
 
-func (p *Processor) Audiofiles() ([]string, error) {
-	files, err := ioutil.ReadDir(p.DestDir)
+func (p *Processor) AudioFiles() ([]string, error) {
+	files, err := ioutil.ReadDir(p.DestDir) // sorted by filename
 	if err != nil {
 		return nil, err
 	}
-	s, err := os.Stat(p.AudioPath)
-	if err != nil {
-		return nil, err
-	}
-	if s.Size() > maxFileSize {
-		var res []string
-		for _, f := range files {
-			if strings.Contains(f.Name(), p.ID) && strings.Contains(f.Name(), "part") {
-				res = append(res, p.DestDir + "/" + f.Name())
-			}
-		}
 
-		return res, nil
+	var res []string
+	for _, f := range files {
+		if strings.Contains(f.Name(), p.VideoID) {
+			res = append(res, p.DestDir + "/" + f.Name())
+		}
 	}
-	return []string{p.AudioPath}, nil
+
+	return res, nil
 }
 
 func (p *Processor) Progress() int64 {
 	fullSize := int64(0)
 
-	stat, err := os.Stat(p.AudioPath)
+	stat, err := os.Stat(p.mainAudioPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			logrus.Error(err)
