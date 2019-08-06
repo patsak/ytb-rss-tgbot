@@ -141,7 +141,7 @@ func (e *VideoDialog) GetYoutubeProcessor(url *url.URL) (*Processor, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = info.Download(info.Formats[len(info.Formats) - 1], file)
+		err = info.Download(info.Formats[0], file)
 		_ = file.Close()
 		if err != nil {
 			return nil, err
@@ -195,7 +195,7 @@ func (p *Processor) AudioFiles() ([]string, error) {
 
 	var res []string
 	for _, f := range files {
-		if strings.Contains(f.Name(), p.VideoID) {
+		if strings.Contains(f.Name(), p.VideoID) && strings.Contains(f.Name(), "mp3") {
 			res = append(res, p.DestDir + "/" + f.Name())
 		}
 	}
